@@ -3,6 +3,7 @@ using Calculation.Service.Models;
 using Calculation.Service.Services;
 using Contracts;
 using CsvHelper;
+using CsvHelper.TypeConversion;
 using CsvHelper.Configuration;
 using MassTransit;
 using System.Globalization;
@@ -95,8 +96,38 @@ public class OrderMap : ClassMap<Order>
         Map(m => m.CustomerId).Name("Customer_Id");
         Map(m => m.ProductCategory).Name("Product_Category");
         Map(m => m.Product).Name("Product");
-        Map(m => m.Sales).Name("Sales");
-        Map(m => m.Quantity).Name("Quantity");
+        Map(m => m.Sales).Name("Sales").TypeConverter<NullableDecimalConverter>();
+        Map(m => m.Quantity).Name("Quantity").TypeConverter<NullableIntConverter>();
         Map(m => m.OrderPriority).Name("Order_Priority").Optional();
     }
 }
+public class NullableIntConverter : DefaultTypeConverter
+{
+    public override object ConvertFromString(string text, IReaderRow row, MemberMapData memberMapData)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return 1; // Default to 1 for missing quantities (assuming at least 1 item)
+        
+        if (int.TryParse(text, out var result))
+            return result;
+        
+        return 1; // Default to 1 if parsing fails
+    }
+}
+
+public class NullableDecimalConverter : DefaultTypeConverter
+{
+    public override object ConvertFromString(string text, IReaderRow row, MemberMapData memberMapData)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return 0m; // Default to 0 for missing sales values
+        
+        if (decimal.TryParse(text, out var result))
+            return result;
+        
+        return 0m; // Default to 0 if parsing fails
+    }
+}
+
+
+
